@@ -1,7 +1,8 @@
+import inspect
+
 from django.contrib.admin.sites import AdminSite
 from django.utils.text import capfirst
 from django.views.generic import View
-import inspect
 
 
 def is_class_based_view(view):
@@ -11,14 +12,13 @@ def is_class_based_view(view):
 class AdminPlusMixin(object):
     """Mixin for AdminSite to allow registering custom admin views."""
 
-    index_template = 'adminplus/index.html'  # That was easy.
+    index_template = "adminplus/index.html"  # That was easy.
 
     def __init__(self, *args, **kwargs):
         self.custom_views = []
         return super(AdminPlusMixin, self).__init__(*args, **kwargs)
 
-    def register_view(self, path, name=None, urlname=None, visible=True,
-                      view=None):
+    def register_view(self, path, name=None, urlname=None, visible=True, view=None):
         """Add a custom admin view. Can be used as a function or a decorator.
 
         * `path` is the path in the admin where the view will live, e.g.
@@ -31,11 +31,13 @@ class AdminPlusMixin(object):
             the custom view should be visible in the admin dashboard or not.
         * `view` is any view function you can imagine.
         """
+
         def decorator(fn):
             if is_class_based_view(fn):
                 fn = fn.as_view()
             self.custom_views.append((path, fn, name, urlname, visible))
             return fn
+
         if view is not None:
             decorator(view)
             return
@@ -44,10 +46,13 @@ class AdminPlusMixin(object):
     def get_urls(self):
         """Add our custom views to the admin urlconf."""
         urls = super(AdminPlusMixin, self).get_urls()
-        from django.conf.urls import url
+        try:  # Django 2+
+            from django.urls import re_path as url
+        except ImportError:
+            from django.conf.urls import url
         for path, view, name, urlname, visible in self.custom_views:
             urls = [
-                url(r'^%s$' % path, self.admin_view(view), name=urlname),
+                url(r"^%s$" % path, self.admin_view(view), name=urlname),
             ] + urls
         return urls
 
@@ -67,9 +72,7 @@ class AdminPlusMixin(object):
 
         # Sort views alphabetically.
         custom_list.sort(key=lambda x: x[1])
-        extra_context.update({
-            'custom_list': custom_list
-        })
+        extra_context.update({"custom_list": custom_list})
         return super(AdminPlusMixin, self).index(request, extra_context)
 
 
